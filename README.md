@@ -1,6 +1,7 @@
 This is a forward  thinking idea to convert an animated gif into format that allows to remain animated in unsupported  web environments complete with ai autonomous testing framework, language processing, reinforcement learning, and explainable AI. The codebase also includes a Streamlit dashboard for visualizing test results and performance metrics.
-Its divided into classes at the moment,with the following notes about each class and added feature
-This testing framework includes:
+
+It has framework for autonomous ai testing 
+    This testing framework includes:
 
     Comprehensive Test Categories:
 
