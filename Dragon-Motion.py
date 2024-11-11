@@ -1,14 +1,19 @@
+import os
 from PIL import Image
 import io
 import base64
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import imageio
 import cv2
 from steganography import Steganography  # Custom module we'll define
 import struct
 import time
 import threading
+import asyncio
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 class DragonMotion:
     """Convert animated content into seemingly static profile pictures that retain motion"""
@@ -31,11 +36,15 @@ class DragonMotion:
             # Compress and encode remaining frames
             encoded_frames = self.compress_frames(frames)
             
+            # Generate metadata
+            metadata = self.generate_metadata(frames)
+            logging.debug(f"Generated metadata: {metadata}")
+            
             # Embed frame data using advanced steganography
             final_image = self.steganography.embed_data(
                 base_frame,
                 encoded_frames,
-                self.generate_metadata(frames)
+                metadata
             )
             
             # Save the result
@@ -83,41 +92,42 @@ class DragonMotion:
             
         return self._pack_compressed_data(compressed_data)
 
-class Steganography:
-    """Advanced steganography for hiding motion data"""
-    
-    def __init__(self):
-        self.bit_depth = 8
-        self.channels = ['R', 'G', 'B', 'A']
-        
-    def embed_data(self, carrier: np.ndarray, data: bytes, metadata: Dict) -> np.ndarray:
-        """Embed motion data into carrier image"""
-        
-        # Convert data to binary
-        binary_data = self._to_binary(data)
-        
-        # Calculate optimal bit distribution
-        bit_map = self._calculate_bit_distribution(
-            carrier.shape,
-            len(binary_data)
-        )
-        
-        # Embed metadata first
-        carrier = self._embed_metadata(carrier, metadata)
-        
-        # Embed frame data using advanced bit manipulation
-        modified = carrier.copy()
-        for y in range(carrier.shape[0]):
-            for x in range(carrier.shape[1]):
-                for c in range(carrier.shape[2]):
-                    if bit_map[y, x, c]:
-                        modified[y, x, c] = self._embed_bits(
-                            carrier[y, x, c],
-                            binary_data,
-                            bit_map[y, x, c]
-                        )
-                        
-        return modified
+    def save_image(self, image: np.ndarray, path: str) -> None:
+        """Save the final image to the specified path"""
+        Image.fromarray(image).save(path)
+
+    def generate_metadata(self, frames: List[np.ndarray]) -> Dict:
+        """Generate metadata for the animation"""
+        metadata = {
+            'frame_count': len(frames),
+            'fps': 30,  # Example value
+            'duration': len(frames) / 30,  # Example value
+            'resolution': frames[0].shape[:2]  # Height and width
+        }
+        return metadata
+
+    def get_file_size(self, path: str) -> int:
+        """Get the file size of the output image"""
+        return os.path.getsize(path)
+
+    def _optimize_for_steganography(self, image: np.ndarray) -> np.ndarray:
+        """Optimize image for data hiding"""
+        # Placeholder implementation
+        return image
+
+    def _compress_delta(self, delta: np.ndarray) -> bytes:
+        """Compress delta frame"""
+        # Placeholder implementation
+        return delta.tobytes()
+
+    def _pack_compressed_data(self, data: List[bytes]) -> bytes:
+        """Pack compressed data into a single bytes object"""
+        return b''.join(data)
+
+    def _load_video(self, path: str) -> List[np.ndarray]:
+        """Load video frames"""
+        # Placeholder implementation
+        return []
 
 class DragonMotionPlayer:
     """Player for Dragon Motion images"""
@@ -126,6 +136,8 @@ class DragonMotionPlayer:
         self.steganography = Steganography()
         self.current_frame = 0
         self.playing = False
+        self.frames = []
+        self.metadata = {}
         
     def load_dragon_motion(self, image_path: str) -> Dict:
         """Load and prepare Dragon Motion image for playback"""
@@ -133,24 +145,37 @@ class DragonMotionPlayer:
         try:
             # Load image
             image = Image.open(image_path)
+            image_np = np.array(image)
             
             # Extract metadata and frame data
-            metadata = self.steganography.extract_metadata(image)
-            frame_data = self.steganography.extract_frame_data(image)
+            self.metadata = self.steganography.extract_metadata(image_np)
+            logging.debug(f"Extracted metadata: {self.metadata}")
+            frame_data = self.steganography.extract_frame_data(image_np)
             
             # Decompress frames
-            self.frames = self._decompress_frames(frame_data, metadata)
+            self.frames = self._decompress_frames(frame_data, self.metadata)
             
             return {
                 'status': 'success',
                 'frame_count': len(self.frames),
-                'fps': metadata.get('fps', 30),
-                'duration': metadata.get('duration')
+                'fps': self.metadata.get('fps', 30),
+                'duration': self.metadata.get('duration')
             }
             
         except Exception as e:
             logging.error(f"Loading error: {e}")
             return {'status': 'error', 'error': str(e)}
+
+    def _decompress_frames(self, frame_data: bytes, metadata: Dict) -> List[np.ndarray]:
+        """Decompress frame data into individual frames"""
+        # Placeholder implementation
+        # This should be replaced with actual decompression logic
+        frame_count = metadata.get('frame_count')
+        if frame_count is None:
+            raise ValueError("Metadata missing 'frame_count'")
+        frame_height, frame_width = metadata.get('resolution', (1080, 1920))
+        frames = [np.zeros((frame_height, frame_width, 3), dtype=np.uint8) for _ in range(frame_count)]
+        return frames
 
     def play(self) -> None:
         """Start playing the motion"""
@@ -171,6 +196,13 @@ class DragonMotionPlayer:
             
             # Control timing
             time.sleep(1/self.metadata['fps'])
+
+    def _update_display(self, frame: np.ndarray) -> None:
+        """Update the display with the current frame"""
+        # Placeholder implementation
+        # This should be replaced with actual display update logic
+        cv2.imshow('Dragon Motion Player', frame)
+        cv2.waitKey(1)
 
 # Usage Example
 async def main():
